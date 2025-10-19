@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Wikipedia Random Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Titre animé */
+        h1 {
+            font-size: 48px;
+            color: #0078d7;
+            transition: transform 0.5s, opacity 0.5s;
+        }
+
+        /* Trois points animés pour le titre */
+        #loadingDots {
+            display: none;
+            font-size: 32px;
+            color: #0078d7;
+            margin: 10px auto;
+        }
+
+        .dot {
+            display: inline-block;
+            animation: blink 1s infinite;
+        }
+
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
+        }
+
+        /* Spinner pour l'image */
+        #spinner {
+            display: none;
+            margin: 20px auto;
+        }
+
+        .loader {
+            border: 16px solid #f3f3f3;
+            border-top: 16px solid #0078d7;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            animation: spin 1s linear infinite;
+            margin: auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Image prévisualisation */
+        img {
+            margin-top: 20px;
+            max-width: 98%;
+            height: auto;
+            cursor: pointer;
+            border: 3px solid #0078d7;
+            border-radius: 10px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Bouton nouvel article */
+        button {
+            margin-top: 20px;
+            font-size: 20px;
+            padding: 10px 20px;
+            background-color: #0078d7;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #005ea6;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Titre de l'article -->
+    <h1 id="articleTitle">{{ title }}</h1>
+
+    <!-- Trois points animés pour le titre -->
+    <div id="loadingDots">
+        <span class="dot">.</span>
+        <span class="dot">.</span>
+        <span class="dot">.</span>
+    </div>
+
+    <!-- Spinner pour la prévisualisation -->
+    <div id="spinner">
+        <div class="loader"></div>
+    </div>
+
+    <!-- Image prévisualisation -->
+    <img id="preview" src="{{ url_for('screenshot') }}" alt="Article aléatoire">
+
+    <!-- Bouton nouvel article -->
+    <button id="newArticleBtn">Nouvel article au hasard</button>
+
+    <script>
+        const preview = document.getElementById("preview");
+        const btn = document.getElementById("newArticleBtn");
+        const titleH1 = document.getElementById("articleTitle");
+        const loadingDots = document.getElementById("loadingDots");
+        const spinner = document.getElementById("spinner");
+
+        // Clic sur l'image → ouvre l'article Wikipedia dans un nouvel onglet
+        preview.addEventListener("click", async () => {
+            const res = await fetch("/article_link");
+            const data = await res.json();
+            window.open(data.url, "_blank");
+        });
+
+        // Clic sur le bouton → recharge titre + image
+        btn.addEventListener("click", async () => {
+            // Affiche loaders
+            loadingDots.style.display = "block";
+            titleH1.style.opacity = "0";
+            spinner.style.display = "block";
+            preview.style.display = "none";
+
+            // Requête pour charger un nouvel article
+            const res = await fetch("/new_article");
+            const data = await res.json();
+
+            // Recharge l'image
+            preview.src = "/screenshot?time=" + data.img_timestamp;
+            preview.onclick = () => window.open(data.url, "_blank");
+
+            // Une fois l'image chargée → cache spinner et affiche image
+            preview.onload = () => {
+                spinner.style.display = "none";
+                preview.style.display = "block";
+            };
+
+            // Animation titre → cache les points et affiche titre
+            setTimeout(() => {
+                loadingDots.style.display = "none";
+                titleH1.textContent = data.title;
+                titleH1.style.transform = "scale(0)";
+                titleH1.style.opacity = "0";
+                setTimeout(() => {
+                    titleH1.style.transform = "scale(1)";
+                    titleH1.style.opacity = "1";
+                }, 50);
+            }, 800);
+        });
+    </script>
+</body>
+</html>
