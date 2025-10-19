@@ -1,17 +1,15 @@
 from flask import Flask, render_template, send_file, jsonify
-from selenium.webdriver.chrome.service import Service
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from PIL import Image
 import io
-import os
 import threading
 import time
 
 app = Flask(__name__)
 
-# URL de l'article aléatoire
 RANDOM_ARTICLE_URL = "https://fr.wikipedia.org/wiki/Sp%C3%A9cial:Page_au_hasard"
 
 driver = None
@@ -20,14 +18,13 @@ current_url = ""
 last_image_data = b""
 lock = threading.Lock()
 
-# --- Selenium setup ---
 def create_driver():
     chrome_options = Options()
     chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
 
     driver = webdriver.Chrome(
         service=Service(ChromeDriverManager().install()),
@@ -35,9 +32,18 @@ def create_driver():
     )
     return driver
 
-# --- Capture d'article ---
+# Initialisation du driver une seule fois
+try:
+    driver = create_driver()
+except Exception as e:
+    print("Erreur lors de la création du driver:", e)
+    driver = None
+
 def capture_article():
     global current_title, current_url
+    if driver is None:
+        raise RuntimeError("Le driver Selenium n'est pas initialisé!")
+
     driver.get(RANDOM_ARTICLE_URL)
     time.sleep(3)
     try:
@@ -50,19 +56,16 @@ def capture_article():
     screenshot_png = driver.get_screenshot_as_png()
     image = Image.open(io.BytesIO(screenshot_png))
 
-    # Découpe haut de page pour retirer bandeau (35%)
     width, height = image.size
     start_y = int(height * 0.35)
     cropped_image = image.crop((0, start_y, width, height))
-
-    # Redimensionne pour navigateur (largeur max 1200px)
     cropped_image.thumbnail((1200, 1000))
+
     bio = io.BytesIO()
     cropped_image.save(bio, format="PNG")
     bio.seek(0)
     return bio
 
-# --- Routes ---
 @app.route("/")
 def index():
     return render_template("index.html", title=current_title)
@@ -78,7 +81,6 @@ def screenshot():
 
 @app.route("/new_article")
 def new_article():
-    """Capture un nouvel article et renvoie info JSON"""
     global last_image_data
     with lock:
         bio = capture_article()
@@ -93,10 +95,11 @@ def new_article():
 def article_link():
     return jsonify({"url": current_url, "title": current_title})
 
-# --- Capture initiale pour ne pas avoir d'image vide ---
+# --- Capture initiale ---
 with lock:
-    bio = capture_article()
-    last_image_data = bio.getvalue()
+    if driver is not None:
+        bio = capture_article()
+        last_image_data = bio.getvalue()
 
 if __name__ == "__main__":
     app.run(debug=True)
