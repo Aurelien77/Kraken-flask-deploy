@@ -26,23 +26,24 @@ def create_driver():
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")  # utile sur Linux
 
+    # Binaire Chromium/Chrome sur Linux
     possible_binaries = [
-        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
         "/usr/bin/chromium",
-        "/usr/bin/chromium-browser",
-        "/snap/bin/chromium"
+        "/usr/bin/chromium-browser"
     ]
     for path in possible_binaries:
         if os.path.exists(path):
             chrome_options.binary_location = path
             break
 
+    # ChromeDriver Linux
     possible_drivers = [
-        "./chromedriver.exe",
-        "./chromedriver",
-        "/usr/bin/chromedriver",
-        "/snap/bin/chromedriver"
+        "/usr/local/bin/chromedriver",  # si tu l’as installé ici
+        "/usr/bin/chromedriver"
     ]
     driver_path = None
     for path in possible_drivers:
@@ -50,12 +51,11 @@ def create_driver():
             driver_path = path
             break
     if not driver_path:
-        raise Exception("chromedriver introuvable!")
+        raise Exception("chromedriver introuvable sur Linux !")
 
     service = Service(driver_path)
     driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
-
 driver = create_driver()
 
 # --- Capture d'article ---
