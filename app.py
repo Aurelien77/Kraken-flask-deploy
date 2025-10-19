@@ -1,7 +1,8 @@
 from flask import Flask, render_template, send_file, jsonify
-from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 from PIL import Image
 import io
 import os
@@ -26,37 +27,13 @@ def create_driver():
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")  # utile sur Linux
+    chrome_options.add_argument("--disable-dev-shm-usage")
 
-    # Binaire Chromium/Chrome sur Linux
-    possible_binaries = [
-        "/usr/bin/google-chrome",
-        "/usr/bin/google-chrome-stable",
-        "/usr/bin/chromium",
-        "/usr/bin/chromium-browser"
-    ]
-    for path in possible_binaries:
-        if os.path.exists(path):
-            chrome_options.binary_location = path
-            break
-
-    # ChromeDriver Linux
-    possible_drivers = [
-        "/usr/local/bin/chromedriver",  # si tu l’as installé ici
-        "/usr/bin/chromedriver"
-    ]
-    driver_path = None
-    for path in possible_drivers:
-        if os.path.exists(path):
-            driver_path = path
-            break
-    if not driver_path:
-        raise Exception("chromedriver introuvable sur Linux !")
-
-    service = Service(driver_path)
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=chrome_options
+    )
     return driver
-driver = create_driver()
 
 # --- Capture d'article ---
 def capture_article():
